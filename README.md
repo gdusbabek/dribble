@@ -69,4 +69,8 @@ Recreate the journal so that we can recover writes (just one in this case). Old 
     
 This new journal can still be appended to. However, once you `mark()` it again, any old segments, including those
 that were recovered, are available to be collected for deletion.
+
+### License
+
+Apache 2.0. Go for it.
     
