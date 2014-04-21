@@ -26,7 +26,7 @@ public class TestJournalSettings {
         byte[] bigBuf = new byte[params.bufferSize];
         random.nextBytes(bigBuf);
         
-        File dir = Util.getRandomTempDir();
+        File dir = TestUtil.getRandomTempDir();
         System.out.println(dir.getAbsolutePath());
         
         SegmentFactory factory = FileSegmentFactory.FileSegmentFactoryBuilder.newBuilder()
@@ -66,7 +66,7 @@ public class TestJournalSettings {
         System.out.println();
               
         Assert.assertEquals(11 * 2, dir.list().length);
-        Util.removeDir(dir);
+        TestUtil.removeDir(dir);
     }
     
     @Parameterized.Parameters

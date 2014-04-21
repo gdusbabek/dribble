@@ -4,7 +4,7 @@ import java.io.File;
 import java.math.BigInteger;
 import java.util.Random;
 
-public class Util {
+public class TestUtil {
     private static final Random random = new Random(System.nanoTime());
         
     public static File getRandomTempDir() {

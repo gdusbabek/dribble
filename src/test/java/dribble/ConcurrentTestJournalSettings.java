@@ -33,7 +33,7 @@ public class ConcurrentTestJournalSettings {
         final byte[] buf = new byte[params.bufferSize];
         random.nextBytes(buf);
         
-        File dir = Util.getRandomTempDir();
+        File dir = TestUtil.getRandomTempDir();
         System.out.println(dir.getAbsolutePath());
         
         SegmentFactory factory = FileSegmentFactory.FileSegmentFactoryBuilder.newBuilder()
@@ -94,7 +94,7 @@ public class ConcurrentTestJournalSettings {
         }
         
         Assert.assertEquals(11 * 2, dir.list().length);
-        Util.removeDir(dir);
+        TestUtil.removeDir(dir);
         
         System.out.println(String.format("total/append: %d/%d", realEnd-start, end-start));
     }

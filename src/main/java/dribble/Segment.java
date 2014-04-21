@@ -9,7 +9,7 @@ public class Segment implements Comparable<Segment> {
     private static final long FORGET = -1;
     private ByteBuffer LENGTH_BUF = ByteBuffer.wrap(new byte[4]);
     
-    private final DataIO output;
+    private final DataIO dataIO;
     private final MetaIO meta;
     
     private volatile long bytesSinceLastSync = 0;
@@ -32,13 +32,24 @@ public class Segment implements Comparable<Segment> {
     }
     
     public static Segment forRead(DataIO output, MetaIO meta) throws IOException {
-        Segment seg = new Segment(output, meta);
+        // todo: needs its own class.
+        Segment seg = new Segment(output, meta) {
+            @Override
+            public void mark(long pos) throws IOException {
+                throw new IOException("Read only mode!");
+            }
+
+            @Override
+            public void append(ByteBuffer buf) throws IOException {
+                throw new IOException("Read only mode!");
+            }
+        };
         seg.loadMark();
         return seg;
     }
     
-    private Segment(DataIO output, MetaIO meta) {
-        this.output = output;
+    private Segment(DataIO dataIO, MetaIO meta) {
+        this.dataIO = dataIO;
         this.meta = meta;
     }
     
@@ -50,19 +61,19 @@ public class Segment implements Comparable<Segment> {
     public void syncAfterWrites(long thisMany) { syncAfterWrites = thisMany; }
     public void syncAfterTime(long millis) { syncAfterTime = millis; }
     public void syncAlways(boolean b) { alwaysSync = b; }
-    public int generation() { return output.generation(); }
+    public int generation() { return dataIO.generation(); }
     
     public long getFilePointer() { return filePointer; }
     public long getMark() { return mark; }
     
     public void close() throws IOException {
         force();
-        output.close();
+        dataIO.close();
         meta.close();
     }
     
     public void force() throws IOException {
-        output.sync();
+        dataIO.sync();
         meta.sync();
     }
     
@@ -73,14 +84,32 @@ public class Segment implements Comparable<Segment> {
         this.mark = pos;
     }
     
+    public void softMark(long pos) {
+        this.mark = pos;
+    }
+    
     public void forget() throws IOException {
         mark(FORGET);
     }
     
     public void delete() throws IOException {
         close();
-        output.delete();
+        dataIO.delete();
         meta.delete();
+    }
+    
+    public Segment position(long pos) {
+        this.filePointer = pos;
+        return this;
+    }
+    
+    public int readInt(long position) throws IOException {
+        dataIO.seek(position);
+        this.filePointer = position;
+        ByteBuffer buf = ByteBuffer.wrap(new byte[4]);
+        dataIO.read(buf);
+        buf.flip();
+        return Util.readInt(buf);
     }
     
     public void append(ByteBuffer buf) throws IOException {
@@ -92,7 +121,7 @@ public class Segment implements Comparable<Segment> {
         LENGTH_BUF.flip();
         writeFully(LENGTH_BUF, 4);
         writeFully(buf, buf.remaining());
-        filePointer = output.position();
+        filePointer = dataIO.position();
         
         bytesSinceLastSync += remaining;
         writesSinceSync += 1;
@@ -103,12 +132,16 @@ public class Segment implements Comparable<Segment> {
     private void writeFully(ByteBuffer buf, int remaining) throws IOException {
         int wrote = 0;
         while (wrote < remaining) {
-            wrote += output.write(buf);
+            wrote += dataIO.write(buf);
         }
     }
     
     public Iterable<ByteBuffer> readFromMark() throws IOException {
-        output.seek(mark);
+        return readFromMark(mark);
+    }
+    
+    public Iterable<ByteBuffer> readFromMark(long softMark) throws IOException {
+        dataIO.seek(softMark);
         return new Iterable<ByteBuffer>() {
             public Iterator<ByteBuffer> iterator() {
                 return new Iterator<ByteBuffer>() {
@@ -160,7 +193,7 @@ public class Segment implements Comparable<Segment> {
                         int length = buf.remaining();
                         int read = 0;
                         while (read < length && buf.remaining() > 0) {
-                            int justRead =  output.read(buf);
+                            int justRead =  dataIO.read(buf);
                             if (justRead < 0) {
                                 throw new IOException("EOF");
                             }
@@ -195,7 +228,7 @@ public class Segment implements Comparable<Segment> {
         }
         
         if (sync) {
-            output.sync();
+            dataIO.sync();
             bytesSinceLastSync = 0;
             lastSync = now;
             writesSinceSync = 0;
