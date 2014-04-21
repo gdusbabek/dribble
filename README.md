@@ -5,6 +5,8 @@ A journaling library (commit log) written in java. Supports marking + recovery.
 ### TODOs
 
  - Consider adding a sync command to the `Receipt` API.
+ - Backpressure. `Journal.append()` would become slower when there are lots of uncommitted writes in the append queue.
+ - `Receipt` as a first-class API. They are awkward to work with right now.
  - Robust tests. They are pretty weak right now.
  - A compaction API. right now, files are deleted by the write thread. This work should be done by another threadpool.
  - All that maven crap.
